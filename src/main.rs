@@ -54,18 +54,23 @@ fn new(args: &NewArgs) {
     let mut all_args = get_saved_args();
     let differ_path = get_differ_path();
 
-    let mut found = None;
+    let mut override_idx = None;
+    let mut seen: HashMap<String, usize> = HashMap::new();
     for (arg, idx) in all_args.iter().zip(0..) {
         if arg.id == args.id && arg.variant == args.variant {
-            found = Some(idx);
+            override_idx = Some(idx);
+        } else if let Some(seen_count) = seen.get(&arg.id) {
+            if seen_count == &2 {
+                panic!("id {} can't have more than two variants", arg.id);
+            }
         }
+        let count = seen.entry(arg.id.clone()).or_insert(0);
+        *count += 1;
     }
-    if let Some(idx) = found {
-        all_args[idx] = args.clone();
-    } else {
-        all_args.push(args.clone());
+    match override_idx {
+        Some(i) => all_args[i] = args.clone(),
+        None => all_args.push(args.clone()),
     }
-
     let encoded_args: Vec<u8> = bincode::serialize(&all_args).unwrap();
     std::fs::write(Path::new(&differ_path), encoded_args).unwrap();
 }
