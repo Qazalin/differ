@@ -22,33 +22,29 @@ enum Cmd {
     Diff,
 }
 
-fn temp(x: &str) -> String {
-    let temp_dir = tempfile::tempdir().unwrap().into_path();
-    let temp_path: PathBuf = temp_dir.join(x);
-    return temp_path.to_str().unwrap().to_string();
-}
-
 fn new(args: &NewArgs) {
-    let file_loc = temp(&format!("{}_{}.df", args.id, args.variant));
-    let file = Path::new(&file_loc);
-    std::fs::write(file, args.clone().content).expect("Unable to write file");
-    println!("Created file at {}", file_loc);
+    let pwd = std::env::current_dir().unwrap();
+    let scope = pwd.file_name().unwrap().to_str().unwrap();
+    let dir_path = PathBuf::from("/tmp/.differ");
+    if !dir_path.exists() {
+        std::fs::create_dir(&dir_path).unwrap();
+    }
 
-    let differ_path = std::env::var("HOME").unwrap() + "/.differ";
+    let differ_path = dir_path.join(format!("{}.bin", scope));
     let differ_loc = Path::new(&differ_path);
     if !differ_loc.exists() {
-        std::fs::write(differ_loc, "").expect("Unable to write file");
+        std::fs::write(differ_loc, "").unwrap();
     }
-    let differ_content = std::fs::read_to_string(differ_loc).expect("Unable to read file");
+    let differ_content = std::fs::read_to_string(differ_loc).unwrap();
     let mut all_args: Vec<NewArgs> = vec![];
-    println!("Differ content: {}", differ_content);
     if differ_content.len() != 0 {
         all_args = bincode::deserialize(&differ_content.as_bytes()).unwrap();
-        println!("All args: {:?}", all_args);
     }
     all_args.push(args.clone());
     let encoded_args: Vec<u8> = bincode::serialize(&all_args).unwrap();
-    std::fs::write(differ_loc, encoded_args).expect("Unable to write file");
+    std::fs::write(differ_loc, encoded_args).unwrap();
+
+    println!("{:?}", all_args);
 }
 
 fn diff() {
