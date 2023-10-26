@@ -1,4 +1,5 @@
 use clap::{Args, Parser, Subcommand};
+use serde::{Deserialize, Serialize};
 use std::path::{Path, PathBuf};
 
 #[derive(Parser, Debug)]
@@ -8,7 +9,7 @@ struct DifferArgs {
     pub cmd: Option<Cmd>,
 }
 
-#[derive(Args, Debug)]
+#[derive(Args, Debug, Serialize, Deserialize, Clone)]
 struct NewArgs {
     content: String,
     /// id is shared between all the variants
@@ -27,23 +28,27 @@ fn temp(x: &str) -> String {
     return temp_path.to_str().unwrap().to_string();
 }
 
-fn new(id: String, variant: String, content: String) {
-    let file_loc = temp(&format!("{}_{}.df", id, variant));
+fn new(args: &NewArgs) {
+    let file_loc = temp(&format!("{}_{}.df", args.id, args.variant));
     let file = Path::new(&file_loc);
-    std::fs::write(file, content).expect("Unable to write file");
+    std::fs::write(file, args.clone().content).expect("Unable to write file");
     println!("Created file at {}", file_loc);
 
-    let differ_log = Path::new("/tmp/differ_log");
-    println!("Differ log: {}", differ_log.display());
-    if !differ_log.exists() {
-        std::fs::write(differ_log, "").expect("Unable to write file");
+    let differ_path = std::env::var("HOME").unwrap() + "/.differ";
+    let differ_loc = Path::new(&differ_path);
+    if !differ_loc.exists() {
+        std::fs::write(differ_loc, "").expect("Unable to write file");
     }
-    let differ_log_contents = std::fs::read_to_string(differ_log).expect("Unable to read file");
-    println!("Differ log contents: {}", differ_log_contents);
-
-    let mut differ_log_contents = differ_log_contents.to_string();
-    differ_log_contents.push_str(&format!("{}\n", file_loc));
-    std::fs::write(differ_log, differ_log_contents).expect("Unable to write file");
+    let differ_content = std::fs::read_to_string(differ_loc).expect("Unable to read file");
+    let mut all_args: Vec<NewArgs> = vec![];
+    println!("Differ content: {}", differ_content);
+    if differ_content.len() != 0 {
+        all_args = bincode::deserialize(&differ_content.as_bytes()).unwrap();
+        println!("All args: {:?}", all_args);
+    }
+    all_args.push(args.clone());
+    let encoded_args: Vec<u8> = bincode::serialize(&all_args).unwrap();
+    std::fs::write(differ_loc, encoded_args).expect("Unable to write file");
 }
 
 fn diff() {
@@ -51,14 +56,9 @@ fn diff() {
 }
 
 fn main() {
-    let bincode_cfg = options();
     let args = DifferArgs::parse();
     match args.cmd {
-        Some(Cmd::New(NewArgs {
-            content,
-            id,
-            variant,
-        })) => new(content, id, variant),
+        Some(Cmd::New(args)) => new(&args),
         Some(Cmd::Diff) => diff(),
         None => println!("No subcommand was used"),
     }
