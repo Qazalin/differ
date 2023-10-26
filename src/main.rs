@@ -22,7 +22,7 @@ enum Cmd {
     Diff,
 }
 
-fn new(args: &NewArgs) {
+fn get_differ_path() -> PathBuf {
     let pwd = std::env::current_dir().unwrap();
     let scope = pwd.file_name().unwrap().to_str().unwrap();
     let dir_path = PathBuf::from("/tmp/.differ");
@@ -31,6 +31,11 @@ fn new(args: &NewArgs) {
     }
 
     let differ_path = dir_path.join(format!("{}.bin", scope));
+    return differ_path;
+}
+
+fn get_saved_args() -> Vec<NewArgs> {
+    let differ_path = get_differ_path();
     let differ_loc = Path::new(&differ_path);
     if !differ_loc.exists() {
         std::fs::write(differ_loc, "").unwrap();
@@ -40,15 +45,20 @@ fn new(args: &NewArgs) {
     if differ_content.len() != 0 {
         all_args = bincode::deserialize(&differ_content.as_bytes()).unwrap();
     }
+    return all_args;
+}
+
+fn new(args: &NewArgs) {
+    let mut all_args = get_saved_args();
+    let differ_path = get_differ_path();
     all_args.push(args.clone());
     let encoded_args: Vec<u8> = bincode::serialize(&all_args).unwrap();
-    std::fs::write(differ_loc, encoded_args).unwrap();
-
-    println!("{:?}", all_args);
+    std::fs::write(Path::new(&differ_path), encoded_args).unwrap();
 }
 
 fn diff() {
-    todo!();
+    let all_args = get_saved_args();
+    println!("{:?}", all_args);
 }
 
 fn main() {
