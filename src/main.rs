@@ -1,22 +1,23 @@
-use clap::{Parser, Subcommand};
+use clap::{Args, Parser, Subcommand};
 use std::path::{Path, PathBuf};
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
-struct Args {
+struct DifferArgs {
     #[command(subcommand)]
     pub cmd: Option<Cmd>,
 }
 
+#[derive(Args, Debug)]
+struct NewArgs {
+    content: String,
+    /// id is shared between all the variants
+    id: String,
+    variant: String, // TODO should variant be derived?
+}
 #[derive(Subcommand, Debug)]
 enum Cmd {
-    /// Create a new variant
-    New {
-        content: String,
-        /// id is shared between all the variants
-        id: String,
-        variant: String, // TODO should variant be derived?
-    },
+    New(NewArgs),
     Diff,
 }
 
@@ -50,13 +51,14 @@ fn diff() {
 }
 
 fn main() {
-    let args = Args::parse();
+    let bincode_cfg = options();
+    let args = DifferArgs::parse();
     match args.cmd {
-        Some(Cmd::New {
+        Some(Cmd::New(NewArgs {
             content,
             id,
             variant,
-        }) => new(content, id, variant),
+        })) => new(content, id, variant),
         Some(Cmd::Diff) => diff(),
         None => println!("No subcommand was used"),
     }
