@@ -29,9 +29,7 @@ fn get_differ_path() -> PathBuf {
     if !dir_path.exists() {
         std::fs::create_dir(&dir_path).unwrap();
     }
-
-    let differ_path = dir_path.join(format!("{}.bin", scope));
-    return differ_path;
+    return dir_path.join(format!("{}.bin", scope));
 }
 
 fn get_saved_args() -> Vec<NewArgs> {
@@ -51,7 +49,19 @@ fn get_saved_args() -> Vec<NewArgs> {
 fn new(args: &NewArgs) {
     let mut all_args = get_saved_args();
     let differ_path = get_differ_path();
-    all_args.push(args.clone());
+
+    let mut found = None;
+    for (arg, idx) in all_args.iter().zip(0..) {
+        if arg.id == args.id && arg.variant == args.variant {
+            found = Some(idx);
+        }
+    }
+    if let Some(idx) = found {
+        all_args[idx] = args.clone();
+    } else {
+        all_args.push(args.clone());
+    }
+
     let encoded_args: Vec<u8> = bincode::serialize(&all_args).unwrap();
     std::fs::write(Path::new(&differ_path), encoded_args).unwrap();
 }
