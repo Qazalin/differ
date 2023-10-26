@@ -1,9 +1,9 @@
 use clap::{Args, Parser, Subcommand};
-use difference::{Changeset, Difference};
+use colored::*;
+use difference::Changeset;
 use itertools::Itertools;
 use serde::{Deserialize, Serialize};
 use std::collections::HashMap;
-use std::io::Write;
 use std::path::{Path, PathBuf};
 
 #[derive(Parser, Debug)]
@@ -75,31 +75,6 @@ fn new(args: &NewArgs) {
     std::fs::write(Path::new(&differ_path), encoded_args).unwrap();
 }
 
-fn display_diff(text1: &str, text2: &str) {
-    let Changeset { diffs, .. } = Changeset::new(text1, text2, "\n");
-    let mut t = term::stdout().unwrap();
-
-    for diff in &diffs {
-        match diff {
-            Difference::Same(ref x) => {
-                t.reset().unwrap();
-                writeln!(t, " {}", x);
-            }
-            Difference::Add(ref x) => {
-                t.fg(term::color::GREEN).unwrap();
-                writeln!(t, "+{}", x);
-            }
-            Difference::Rem(ref x) => {
-                t.fg(term::color::RED).unwrap();
-                writeln!(t, "-{}", x);
-            }
-        }
-    }
-
-    t.reset().unwrap();
-    t.flush().unwrap();
-}
-
 fn diff() {
     let args = get_saved_args();
     let grouped_args: HashMap<_, Vec<_>> = args
@@ -110,15 +85,16 @@ fn diff() {
         .collect();
 
     for (name, args) in grouped_args {
-        println!("Group: {}", name);
-
-        for i in 0..args.len() {
-            for j in i + 1..args.len() {
-                println!(
-                    "Differences between Variant {} and Variant {}:",
-                    args[i].variant, args[j].variant
-                );
-                display_diff(&args[i].content, &args[j].content);
+        println!(
+            "-- ID: {}. Variants {}, {}",
+            name, args[0].variant, args[1].variant
+        );
+        let Changeset { diffs, .. } = Changeset::new(&args[0].content, &args[1].content, "\n");
+        for diff in &diffs {
+            match diff {
+                difference::Difference::Same(part) => println!("  {}", part),
+                difference::Difference::Add(part) => println!("{}", format!("+ {}", part).green()),
+                difference::Difference::Rem(part) => println!("{}", format!("- {}", part).red()),
             }
         }
     }
