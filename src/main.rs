@@ -92,6 +92,7 @@ fn diff() {
         let Changeset { diffs, .. } = Changeset::new(&args[0].content, &args[1].content, "\n");
         for diff in &diffs {
             match diff {
+                // TODO write this part yourself
                 difference::Difference::Same(part) => println!("  {}", part),
                 difference::Difference::Add(part) => println!("{}", format!("+ {}", part).green()),
                 difference::Difference::Rem(part) => println!("{}", format!("- {}", part).red()),
@@ -106,5 +107,51 @@ fn main() {
         Some(Cmd::New(args)) => new(&args),
         Some(Cmd::Diff) => diff(),
         None => println!("No subcommand was used"),
+    }
+}
+
+/// NOTE: Use one thread: cargo test -- --test-threads=1
+fn clear_differ_file() {
+    let differ_path = get_differ_path();
+    let differ_loc = Path::new(&differ_path);
+    if differ_loc.exists() {
+        std::fs::remove_file(differ_loc).unwrap();
+    }
+}
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn test_new() {
+        clear_differ_file();
+        new(&NewArgs {
+            content: "a\nb\nc\nd\ne".to_string(),
+            id: "test".to_string(),
+            variant: "b".to_string(),
+        });
+        let new_args = get_saved_args();
+        assert_eq!(new_args.len(), 1);
+        assert_eq!(new_args[0].content, "a\nb\nc\nd\ne");
+    }
+    #[test]
+    fn test_diff() {
+        clear_differ_file();
+        let args = vec![
+            NewArgs {
+                content: "a\nb\nc".to_string(),
+                id: "test".to_string(),
+                variant: "a".to_string(),
+            },
+            NewArgs {
+                content: "a\nb\nc\nd".to_string(),
+                id: "test".to_string(),
+                variant: "b".to_string(),
+            },
+        ];
+        let differ_path = get_differ_path();
+        let differ_loc = Path::new(&differ_path);
+        let encoded_args: Vec<u8> = bincode::serialize(&args).unwrap();
+        std::fs::write(Path::new(&differ_loc), encoded_args).unwrap();
+        diff();
     }
 }
