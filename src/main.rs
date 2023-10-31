@@ -20,10 +20,17 @@ struct NewArgs {
     id: String,
     variant: String, // TODO should variant be derived?
 }
+
+#[derive(Args, Debug)]
+struct DiffArgs {
+    // Files to compare
+    files: Option<Vec<String>>,
+}
+
 #[derive(Subcommand, Debug)]
 enum Cmd {
     New(NewArgs),
-    Diff,
+    Diff(DiffArgs),
 }
 
 fn get_differ_path() -> PathBuf {
@@ -75,7 +82,7 @@ fn new(args: &NewArgs) {
     std::fs::write(Path::new(&differ_path), encoded_args).unwrap();
 }
 
-fn diff() {
+fn diff_cache() {
     let args = get_saved_args();
     let grouped_args: HashMap<_, Vec<_>> = args
         .into_iter()
@@ -90,8 +97,8 @@ fn diff() {
             name, args[0].variant, args[1].variant
         );
         let Changeset { diffs, .. } = Changeset::new(&args[0].content, &args[1].content, "\n");
-        for diff in &diffs {
-            match diff {
+        for diff_cache in &diffs {
+            match diff_cache {
                 // TODO write this part yourself
                 difference::Difference::Same(part) => println!("  {}", part),
                 difference::Difference::Add(part) => println!("{}", format!("+ {}", part).green()),
@@ -105,13 +112,16 @@ fn main() {
     let args = DifferArgs::parse();
     match args.cmd {
         Some(Cmd::New(args)) => new(&args),
-        Some(Cmd::Diff) => diff(),
+        Some(Cmd::Diff(args)) => match args.files {
+            Some(_) => todo!(),
+            None => diff_cache(),
+        },
         None => println!("No subcommand was used"),
     }
 }
 
 /// NOTE: Use one thread: cargo test -- --test-threads=1
-fn clear_differ_file() {
+fn clear_differ_tempfiles() {
     let differ_path = get_differ_path();
     let differ_loc = Path::new(&differ_path);
     if differ_loc.exists() {
@@ -123,7 +133,7 @@ mod tests {
     use super::*;
     #[test]
     fn test_new() {
-        clear_differ_file();
+        clear_differ_tempfiles();
         new(&NewArgs {
             content: "a\nb\nc\nd\ne".to_string(),
             id: "test".to_string(),
@@ -134,8 +144,8 @@ mod tests {
         assert_eq!(new_args[0].content, "a\nb\nc\nd\ne");
     }
     #[test]
-    fn test_diff() {
-        clear_differ_file();
+    fn test_diff_cache() {
+        clear_differ_tempfiles();
         let args = vec![
             NewArgs {
                 content: "a\nb\nc".to_string(),
@@ -152,6 +162,6 @@ mod tests {
         let differ_loc = Path::new(&differ_path);
         let encoded_args: Vec<u8> = bincode::serialize(&args).unwrap();
         std::fs::write(Path::new(&differ_loc), encoded_args).unwrap();
-        diff();
+        diff_cache();
     }
 }
