@@ -25,6 +25,7 @@ struct NewArgs {
 struct DiffArgs {
     // Files to compare
     files: Option<Vec<String>>,
+    focus_pattern: Option<String>,
 }
 
 #[derive(Subcommand, Debug)]
@@ -113,13 +114,23 @@ fn diff_cache() {
 }
 
 /// Usage: diff f1 f2
-fn diff_files(files: Vec<String>) {
+fn diff_files(files: Vec<String>, focus_pattern: &Option<String>) {
     if files.len() != 2 {
         panic!("Only two files are supported");
     }
     let file_contents = files
         .iter()
-        .map(|file| std::fs::read_to_string(file).unwrap())
+        .map(|file| {
+            let mut contents = std::fs::read_to_string(file).unwrap();
+            if focus_pattern.is_some() {
+                contents = contents
+                    .lines()
+                    .filter(|l| l.contains(focus_pattern.as_ref().unwrap()))
+                    .collect::<Vec<&str>>()
+                    .join("\n")
+            }
+            return contents;
+        })
         .collect::<Vec<String>>();
     print_diff(&file_contents[0], &file_contents[1]);
 }
@@ -129,7 +140,7 @@ fn main() {
     match args.cmd {
         Some(Cmd::New(args)) => new(&args),
         Some(Cmd::Diff(args)) => match args.files {
-            Some(files) => diff_files(files),
+            Some(files) => diff_files(files, &args.focus_pattern),
             None => diff_cache(),
         },
         None => println!("No subcommand was used"),
