@@ -82,6 +82,18 @@ fn new(args: &NewArgs) {
     std::fs::write(Path::new(&differ_path), encoded_args).unwrap();
 }
 
+fn print_diff(v1: &str, v2: &str) {
+    let Changeset { diffs, .. } = Changeset::new(v1, v2, "\n");
+    for diff_cache in &diffs {
+        match diff_cache {
+            // TODO write this part yourself
+            difference::Difference::Same(part) => println!("  {}", part),
+            difference::Difference::Add(part) => println!("{}", format!("+ {}", part).green()),
+            difference::Difference::Rem(part) => println!("{}", format!("- {}", part).red()),
+        }
+    }
+}
+
 fn diff_cache() {
     let args = get_saved_args();
     let grouped_args: HashMap<_, Vec<_>> = args
@@ -96,15 +108,7 @@ fn diff_cache() {
             "-- ID: {}. Variants {}, {}",
             name, args[0].variant, args[1].variant
         );
-        let Changeset { diffs, .. } = Changeset::new(&args[0].content, &args[1].content, "\n");
-        for diff_cache in &diffs {
-            match diff_cache {
-                // TODO write this part yourself
-                difference::Difference::Same(part) => println!("  {}", part),
-                difference::Difference::Add(part) => println!("{}", format!("+ {}", part).green()),
-                difference::Difference::Rem(part) => println!("{}", format!("- {}", part).red()),
-            }
-        }
+        print_diff(&args[0].content, &args[1].content);
     }
 }
 
@@ -117,16 +121,7 @@ fn diff_files(files: Vec<String>) {
         .iter()
         .map(|file| std::fs::read_to_string(file).unwrap())
         .collect::<Vec<String>>();
-
-    let Changeset { diffs, .. } = Changeset::new(&file_contents[0], &file_contents[1], "\n"); // TODO
-                                                                                              // refactor
-    for diff_cache in &diffs {
-        match diff_cache {
-            difference::Difference::Same(part) => println!("  {}", part),
-            difference::Difference::Add(part) => println!("{}", format!("+ {}", part).green()),
-            difference::Difference::Rem(part) => println!("{}", format!("- {}", part).red()),
-        }
-    }
+    print_diff(&file_contents[0], &file_contents[1]);
 }
 
 fn main() {
