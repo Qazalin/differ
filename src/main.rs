@@ -108,12 +108,33 @@ fn diff_cache() {
     }
 }
 
+/// Usage: diff f1 f2
+fn diff_files(files: Vec<String>) {
+    if files.len() != 2 {
+        panic!("Only two files are supported");
+    }
+    let file_contents = files
+        .iter()
+        .map(|file| std::fs::read_to_string(file).unwrap())
+        .collect::<Vec<String>>();
+
+    let Changeset { diffs, .. } = Changeset::new(&file_contents[0], &file_contents[1], "\n"); // TODO
+                                                                                              // refactor
+    for diff_cache in &diffs {
+        match diff_cache {
+            difference::Difference::Same(part) => println!("  {}", part),
+            difference::Difference::Add(part) => println!("{}", format!("+ {}", part).green()),
+            difference::Difference::Rem(part) => println!("{}", format!("- {}", part).red()),
+        }
+    }
+}
+
 fn main() {
     let args = DifferArgs::parse();
     match args.cmd {
         Some(Cmd::New(args)) => new(&args),
         Some(Cmd::Diff(args)) => match args.files {
-            Some(_) => todo!(),
+            Some(files) => diff_files(files),
             None => diff_cache(),
         },
         None => println!("No subcommand was used"),
