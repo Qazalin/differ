@@ -32,6 +32,7 @@ struct DiffArgs {
 enum Cmd {
     New(NewArgs),
     Diff(DiffArgs),
+    Clean,
 }
 
 fn get_differ_path() -> PathBuf {
@@ -143,11 +144,11 @@ fn main() {
             Some(files) => diff_files(files, &args.focus_pattern),
             None => diff_cache(),
         },
+        Some(Cmd::Clean) => clear_differ_tempfiles(),
         None => println!("No subcommand was used"),
     }
 }
 
-/// NOTE: Use one thread: cargo test -- --test-threads=1
 fn clear_differ_tempfiles() {
     let differ_path = get_differ_path();
     let differ_loc = Path::new(&differ_path);
@@ -155,6 +156,7 @@ fn clear_differ_tempfiles() {
         std::fs::remove_file(differ_loc).unwrap();
     }
 }
+/// NOTE: Use one thread: cargo test -- --test-threads=1
 #[cfg(test)]
 mod tests {
     use super::*;
