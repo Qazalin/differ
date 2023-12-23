@@ -25,7 +25,6 @@ struct NewArgs {
 struct DiffArgs {
     // Files to compare
     files: Option<Vec<String>>,
-    focus_pattern: Option<String>,
 }
 
 #[derive(Subcommand, Debug)]
@@ -115,23 +114,13 @@ fn diff_cache() {
 }
 
 /// Usage: diff f1 f2
-fn diff_files(files: Vec<String>, focus_pattern: &Option<String>) {
+fn diff_files(files: Vec<String>) {
     if files.len() != 2 {
         panic!("Only two files are supported");
     }
     let file_contents = files
         .iter()
-        .map(|file| {
-            let mut contents = std::fs::read_to_string(file).unwrap();
-            if focus_pattern.is_some() {
-                contents = contents
-                    .lines()
-                    .filter(|l| l.contains(focus_pattern.as_ref().unwrap()))
-                    .collect::<Vec<&str>>()
-                    .join("\n")
-            }
-            return contents;
-        })
+        .map(|file| std::fs::read_to_string(file).unwrap())
         .collect::<Vec<String>>();
     print_diff(&file_contents[0], &file_contents[1]);
 }
@@ -141,14 +130,30 @@ fn main() {
     match args.cmd {
         Some(Cmd::New(args)) => new(&args),
         Some(Cmd::Diff(args)) => match args.files {
-            Some(files) => diff_files(files, &args.focus_pattern),
+            Some(files) => diff_files(files),
             None => diff_cache(),
         },
-        Some(Cmd::Clean) => clear_differ_tempfiles(),
+        Some(Cmd::Clean) => {
+            clear_differ_tempfiles();
+            clear_differ_files();
+        },
         None => println!("No subcommand was used"),
     }
 }
 
+fn clear_differ_files() {
+    let fns = ["k0", "k1"];
+    let pwd = std::env::current_dir().unwrap();
+    if let Ok(entries) = std::fs::read_dir(pwd) {
+        for entry in entries {
+            if let Ok(entry) = entry {
+                if fns.contains(&entry.path().file_name().unwrap().to_str().unwrap()) {
+                    std::fs::remove_file(entry.path()).unwrap();
+                }
+            }
+        }
+    }
+}
 fn clear_differ_tempfiles() {
     let differ_path = get_differ_path();
     let differ_loc = Path::new(&differ_path);
