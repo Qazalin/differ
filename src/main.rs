@@ -88,9 +88,13 @@ fn print_diff(v1: &str, v2: &str) {
     for diff_cache in &diffs {
         match diff_cache {
             // TODO write this part yourself
-            difference::Difference::Same(part) => println!("  {}", part),
-            difference::Difference::Add(part) => println!("{}", format!("+ {}", part).green()),
-            difference::Difference::Rem(part) => println!("{}", format!("- {}", part).red()),
+            difference::Difference::Same(part) => println!("{}", part),
+            difference::Difference::Add(part) => part
+                .split("\n")
+                .for_each(|l| println!("{}", format!("+ {}", l).green())),
+            difference::Difference::Rem(part) => part
+                .split("\n")
+                .for_each(|l| println!("{}", format!("+ {}", l).red())),
         }
     }
 }
@@ -136,7 +140,7 @@ fn main() {
         Some(Cmd::Clean) => {
             clear_differ_tempfiles();
             clear_differ_files();
-        },
+        }
         None => println!("No subcommand was used"),
     }
 }
