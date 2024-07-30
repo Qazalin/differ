@@ -94,7 +94,7 @@ fn print_diff(v1: &str, v2: &str) {
                 .for_each(|l| println!("{}", format!("+ {}", l).green())),
             difference::Difference::Rem(part) => part
                 .split("\n")
-                .for_each(|l| println!("{}", format!("+ {}", l).red())),
+                .for_each(|l| println!("{}", format!("- {}", l).red())),
         }
     }
 }
