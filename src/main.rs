@@ -1,5 +1,4 @@
 use clap::{Args, Parser, Subcommand};
-use colored::*;
 
 #[derive(Parser, Debug)]
 #[command(author, version, about, long_about = None)]
@@ -27,13 +26,13 @@ fn print_diff(v1: &str, v2: &str) {
         match compare == good {
             true => println!("{good}"),
             false => {
-                println!("{}", format!("- {}", good).red());
-                println!("{}", format!("+ {}", compare).green());
+                println!("\x1b[31m- {}\x1b[0m", good);
+                println!("\x1b[32m+ {}\x1b[0m", compare);
             }
         }
     }
     if diffable < usize::max(v1.len(), v2.len()) {
-        println!("{}", format!("diffed less lines").yellow())
+        println!("\x1b[33mdiffed less lines\x1b[0m");
     }
 }
 
